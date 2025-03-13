@@ -1,8 +1,11 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const NutritionEntry = require('../models/NutritionEntry');
 
-// GET all nutrition entries
+/**
+ * GET all nutrition entries
+ */
 router.get('/', async (req, res) => {
   try {
     const entries = await NutritionEntry.find().sort({ date: -1 });
@@ -12,54 +15,83 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST new nutrition entry
-router.post('/', async (req, res) => {
-  const entry = new NutritionEntry({
-    foodName: req.body.foodName,
-    calories: req.body.calories,
-    protein: req.body.protein,
-    carbs: req.body.carbs,
-    sugar: req.body.sugar,
-    fat: req.body.fat,
-    date: req.body.date
-  });
+/**
+ * POST new nutrition entry with input validation
+ */
+router.post(
+  '/',
+  [
+    body('foodName').notEmpty().withMessage('Food Name is required'),
+    body('calories')
+      .isNumeric()
+      .withMessage('Calories must be a number'),
+    body('protein')
+      .isNumeric()
+      .withMessage('Protein must be a number'),
+    body('carbs')
+      .isNumeric()
+      .withMessage('Carbs must be a number'),
+    body('sugar')
+      .isNumeric()
+      .withMessage('Sugar must be a number'),
+    body('fat')
+      .isNumeric()
+      .withMessage('Fat must be a number'),
+    body('date')
+      .isISO8601()
+      .toDate()
+      .withMessage('Date must be a valid ISO8601 date')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      // Return validation errors to the client
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  try {
-    const newEntry = await entry.save();
-    res.status(201).json(newEntry);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+    const entry = new NutritionEntry({
+      foodName: req.body.foodName,
+      calories: req.body.calories,
+      protein: req.body.protein,
+      carbs: req.body.carbs,
+      sugar: req.body.sugar,
+      fat: req.body.fat,
+      date: req.body.date
+    });
+
+    try {
+      const newEntry = await entry.save();
+      res.status(201).json(newEntry);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
   }
-});
+);
 
-// GET summary stats
+/**
+ * GET today's summary stats
+ */
 router.get('/summary', async (req, res) => {
   try {
-    // Get today's date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Find entries for today
     const todayEntries = await NutritionEntry.find({
       date: { $gte: today }
     });
     
-    // Calculate totals
-    const summary = {
-      calories: 0,
-      protein: 0,
-      carbs: 0,
-      sugar: 0,
-      fat: 0
-    };
-    
-    todayEntries.forEach(entry => {
-      summary.calories += entry.calories;
-      summary.protein += entry.protein;
-      summary.carbs += entry.carbs;
-      summary.sugar += entry.sugar;
-      summary.fat += entry.fat;
-    });
+    // Aggregate nutritional totals
+    const summary = todayEntries.reduce(
+      (totals, entry) => {
+        totals.calories += entry.calories;
+        totals.protein += entry.protein;
+        totals.carbs += entry.carbs;
+        totals.sugar += entry.sugar;
+        totals.fat += entry.fat;
+        return totals;
+      },
+      { calories: 0, protein: 0, carbs: 0, sugar: 0, fat: 0 }
+    );
     
     res.json(summary);
   } catch (err) {
@@ -67,7 +99,9 @@ router.get('/summary', async (req, res) => {
   }
 });
 
-// DELETE entry
+/**
+ * DELETE a nutrition entry by ID
+ */
 router.delete('/:id', async (req, res) => {
   try {
     const entry = await NutritionEntry.findById(req.params.id);
@@ -76,7 +110,7 @@ router.delete('/:id', async (req, res) => {
     }
     
     await entry.remove();
-    res.json({ message: 'Entry deleted' });
+    res.json({ message: 'Entry deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

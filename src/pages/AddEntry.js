@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
 import { addNutritionEntry } from '../services/api';
 
+const initialFormData = {
+  foodName: '',
+  calories: '',
+  protein: '',
+  carbs: '',
+  sugar: '',
+  fat: '',
+  date: new Date().toISOString().slice(0, 10)
+};
+
 function AddEntry() {
-  const [formData, setFormData] = useState({
-    foodName: '',
-    calories: '',
-    protein: '',
-    carbs: '',
-    sugar: '',
-    fat: '',
-    date: new Date().toISOString().substr(0, 10)
-  });
-  
+  const [formData, setFormData] = useState(initialFormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Handle form input changes with destructuring for cleaner code
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
+  // Submit form data and provide user feedback with a clear UI experience
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -30,7 +34,7 @@ function AddEntry() {
     setSuccess('');
     
     try {
-      // Convert string values to numbers
+      // Convert numeric fields from strings to numbers before submission
       const entryData = {
         ...formData,
         calories: Number(formData.calories),
@@ -39,35 +43,26 @@ function AddEntry() {
         sugar: Number(formData.sugar),
         fat: Number(formData.fat)
       };
-      
+
       await addNutritionEntry(entryData);
       
-      // Clear the form
-      setFormData({
-        foodName: '',
-        calories: '',
-        protein: '',
-        carbs: '',
-        sugar: '',
-        fat: '',
-        date: new Date().toISOString().substr(0, 10)
-      });
-      
+      // Reset the form upon successful submission
+      setFormData(initialFormData);
       setSuccess('Food entry added successfully!');
     } catch (err) {
-      setError('Failed to add entry. Please try again.');
       console.error(err);
+      setError('Failed to add entry. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-4 add-entry">
       <h2>Add Nutrition Entry</h2>
       <div className="row">
         <div className="col-md-6 offset-md-3">
-          <div className="card">
+          <div className="card shadow-sm">
             <div className="card-body">
               {error && <div className="alert alert-danger">{error}</div>}
               {success && <div className="alert alert-success">{success}</div>}
@@ -82,6 +77,7 @@ function AddEntry() {
                     name="foodName"
                     value={formData.foodName}
                     onChange={handleChange}
+                    placeholder="e.g., Grilled Chicken Salad"
                     required
                   />
                 </div>
@@ -95,6 +91,7 @@ function AddEntry() {
                     name="calories"
                     value={formData.calories}
                     onChange={handleChange}
+                    placeholder="e.g., 350"
                     required
                   />
                 </div>
@@ -108,6 +105,7 @@ function AddEntry() {
                     name="protein"
                     value={formData.protein}
                     onChange={handleChange}
+                    placeholder="e.g., 25"
                     required
                   />
                 </div>
@@ -121,6 +119,7 @@ function AddEntry() {
                     name="carbs"
                     value={formData.carbs}
                     onChange={handleChange}
+                    placeholder="e.g., 40"
                     required
                   />
                 </div>
@@ -134,6 +133,7 @@ function AddEntry() {
                     name="sugar"
                     value={formData.sugar}
                     onChange={handleChange}
+                    placeholder="e.g., 12"
                     required
                   />
                 </div>
@@ -147,6 +147,7 @@ function AddEntry() {
                     name="fat"
                     value={formData.fat}
                     onChange={handleChange}
+                    placeholder="e.g., 10"
                     required
                   />
                 </div>

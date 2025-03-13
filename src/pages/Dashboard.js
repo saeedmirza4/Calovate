@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Link } from 'react-router-dom';
 import { getNutritionEntries, getTodaySummary } from '../services/api';
+import './Home.css';
 
 // Register Chart.js components
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -15,16 +17,16 @@ function Dashboard() {
     protein: 0,
     carbs: 0,
     sugar: 0,
-    fat: 0
+    fat: 0,
   });
   
-  // Goals (hardcoded for now, could be user-configurable)
+  // Goals (hardcoded for now; these can be user-configurable in the future)
   const goals = {
     calories: 2000,
     protein: 120,
     carbs: 250,
     sugar: 50,
-    fat: 70
+    fat: 70,
   };
   
   useEffect(() => {
@@ -32,11 +34,9 @@ function Dashboard() {
       try {
         setLoading(true);
         
-        // Fetch all entries
+        // Fetch all entries and today's summary
         const entriesData = await getNutritionEntries();
         setEntries(entriesData);
-        
-        // Fetch today's summary
         const summaryData = await getTodaySummary();
         setSummary(summaryData);
         
@@ -51,9 +51,8 @@ function Dashboard() {
     fetchData();
   }, []);
   
-  // Prepare chart data
+  // Prepare chart data for the weekly overview
   const prepareChartData = () => {
-    // Group entries by day
     const days = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -63,14 +62,10 @@ function Dashboard() {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      days[dateStr] = {
-        calories: 0,
-        protein: 0,
-        carbs: 0
-      };
+      days[dateStr] = { calories: 0, protein: 0, carbs: 0 };
     }
     
-    // Add entry data to corresponding days
+    // Aggregate entry data by day
     entries.forEach(entry => {
       const entryDate = new Date(entry.date).toISOString().split('T')[0];
       if (days[entryDate]) {
@@ -100,91 +95,81 @@ function Dashboard() {
           label: 'Carbs (g)',
           data: Object.values(days).map(day => day.carbs),
           backgroundColor: 'rgba(255, 206, 86, 0.5)',
-        }
+        },
       ],
     };
   };
 
   return (
-    <div className="container mt-4">
+    <div className="dashboard-container">
       <h2>Your Nutrition Dashboard</h2>
       
-      {loading && <div className="text-center my-5"><div className="spinner-border"></div></div>}
+      {loading && (
+        <div className="text-center my-5">
+          <div className="spinner-border"></div>
+        </div>
+      )}
       
       {error && <div className="alert alert-danger">{error}</div>}
       
       {!loading && !error && (
         <>
-          <div className="row mt-4">
-            <div className="col-md-8 offset-md-2">
-              <div className="card">
-                <div className="card-body">
-                  <h5 className="card-title">Weekly Overview</h5>
-                  <Bar data={prepareChartData()} />
-                </div>
-              </div>
+          {/* Weekly Overview Chart */}
+          <div className="chart-card">
+            <h5 className="card-title">Weekly Overview</h5>
+            <div className="chart-wrapper">
+              <Bar data={prepareChartData()} options={{ responsive: true, maintainAspectRatio: false }} />
             </div>
           </div>
           
-          <div className="row mt-4">
-            <div className="col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <h5 className="card-title">Today's Summary</h5>
-                  <ul className="list-group">
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Calories
-                      <span className="badge bg-primary rounded-pill">{summary.calories}</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Protein
-                      <span className="badge bg-success rounded-pill">{summary.protein}g</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Carbs
-                      <span className="badge bg-info rounded-pill">{summary.carbs}g</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Sugar
-                      <span className="badge bg-warning rounded-pill">{summary.sugar}g</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Fat
-                      <span className="badge bg-danger rounded-pill">{summary.fat}g</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+          {/* Summary & Goals Cards */}
+          <div className="summary-goals-grid">
+            <div className="card summary-card">
+              <h5 className="card-title">Today's Summary</h5>
+              <ul className="list-group">
+                <li className="list-group-item">
+                  Calories <span className="badge">{summary.calories}</span>
+                </li>
+                <li className="list-group-item">
+                  Protein <span className="badge">{summary.protein}g</span>
+                </li>
+                <li className="list-group-item">
+                  Carbs <span className="badge">{summary.carbs}g</span>
+                </li>
+                <li className="list-group-item">
+                  Sugar <span className="badge">{summary.sugar}g</span>
+                </li>
+                <li className="list-group-item">
+                  Fat <span className="badge">{summary.fat}g</span>
+                </li>
+              </ul>
             </div>
-            <div className="col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <h5 className="card-title">Your Goals</h5>
-                  <ul className="list-group">
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Daily Calories
-                      <span className="badge bg-primary rounded-pill">{goals.calories}</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Daily Protein
-                      <span className="badge bg-success rounded-pill">{goals.protein}g</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Daily Carbs
-                      <span className="badge bg-info rounded-pill">{goals.carbs}g</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Daily Sugar
-                      <span className="badge bg-warning rounded-pill">{goals.sugar}g</span>
-                    </li>
-                    <li className="list-group-item d-flex justify-content-between align-items-center">
-                      Daily Fat
-                      <span className="badge bg-danger rounded-pill">{goals.fat}g</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div className="card goals-card">
+              <h5 className="card-title">Your Goals</h5>
+              <ul className="list-group">
+                <li className="list-group-item">
+                  Daily Calories <span className="badge">{goals.calories}</span>
+                </li>
+                <li className="list-group-item">
+                  Daily Protein <span className="badge">{goals.protein}g</span>
+                </li>
+                <li className="list-group-item">
+                  Daily Carbs <span className="badge">{goals.carbs}g</span>
+                </li>
+                <li className="list-group-item">
+                  Daily Sugar <span className="badge">{goals.sugar}g</span>
+                </li>
+                <li className="list-group-item">
+                  Daily Fat <span className="badge">{goals.fat}g</span>
+                </li>
+              </ul>
             </div>
+          </div>
+          
+          {/* Optional CTA to encourage further engagement */}
+          <div className="cta-section">
+            <h3>Ready to optimize your nutrition?</h3>
+            <Link to="/add-entry" className="btn btn-white">Log Your Meal</Link>
           </div>
         </>
       )}
